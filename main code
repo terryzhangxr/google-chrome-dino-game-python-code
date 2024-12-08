@@ -1,0 +1,152 @@
+import pygame
+import sys
+import random
+
+# 初始化pygame
+pygame.init()
+
+# 设置屏幕大小
+screen_width = 800
+screen_height = 400
+screen = pygame.display.set_mode((screen_width, screen_height))
+
+# 设置颜色
+white = (255, 255, 255)  # 背景颜色设置为白色
+black = (0,0,0)
+green = (0,255,0)
+# 设置时钟
+clock = pygame.time.Clock()
+
+# 设置字体
+font = pygame.font.Font(None, 50)
+
+# 加载并缩小图像
+try:
+    dino_image = pygame.image.load('dino.png').convert_alpha()
+    cactus_image = pygame.image.load('cactus.png').convert_alpha()
+
+    # 缩小图像
+    scale_factor = 0.4 # 缩小因子
+    dino_image = pygame.transform.scale(dino_image, (int(dino_image.get_width() * scale_factor), int(dino_image.get_height() * scale_factor)))
+    cactus_image = pygame.transform.scale(cactus_image, (int(cactus_image.get_width() * scale_factor), int(cactus_image.get_height() * scale_factor)))
+except pygame.error as e:
+    print(f"Cannot load image: {e}")
+    sys.exit()
+
+# 小恐龙类
+class Dino(pygame.sprite.Sprite):
+    def __init__(self):
+        super(Dino, self).__init__()
+        self.image = dino_image
+        self.rect = self.image.get_rect()
+        self.rect.x = 100
+        self.rect.y = screen_height - self.rect.height - 50
+        self.gravity = 0.5
+        self.velocity_y = 0
+        self.jumping = False
+        self.jump_height = -18 # 跳跃高度
+
+    def update(self):
+        if self.jumping:
+            self.velocity_y += self.gravity
+            self.rect.y += self.velocity_y
+            if self.rect.bottom >= screen_height - self.rect.height:
+                self.velocity_y = 0
+                self.jumping = False
+        else:
+            self.velocity_y = 0
+
+    def jump(self):
+        if not self.jumping:
+            self.jumping = True
+            self.velocity_y = self.jump_height
+
+# 障碍物类
+class Obstacle(pygame.sprite.Sprite):
+    def __init__(self):
+        super(Obstacle, self).__init__()
+        self.image = cactus_image
+        self.rect = self.image.get_rect()
+        self.rect.x = screen_width
+        self.rect.y = screen_height - self.rect.height - 55  # 保持障碍物在屏幕底部的直线上
+        self.speed = 2.7
+
+    def update(self):
+        self.rect.x -= self.speed
+        if self.rect.x < -self.rect.width:
+            self.kill()
+
+# 创建小恐龙实例
+dino = Dino()
+
+# 创建障碍物群组
+obstacles = pygame.sprite.Group()
+
+# 分数
+score = 0
+
+# 游戏状态
+game_over = False
+
+# 游戏主循环
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            dino.jump()
+
+    # 更新小恐龙
+    dino.update()
+
+    # 更新障碍物
+    obstacles.update()
+
+    # 障碍物生成
+    if random.randint(1, 120) == 1 and not game_over: # 每120帧大约有1个障碍物生成
+        obstacles.add(Obstacle())
+        if random.randint (1,120) == 2 and not game_over:
+            obstacles.add = 1
+    # 碰撞检测
+    if pygame.sprite.spritecollide(dino, obstacles, False):
+        game_over = True
+
+    # 绘制背景
+    screen.fill(white)
+
+    # 绘制小恐龙
+    screen.blit(dino.image, dino.rect)
+
+    # 绘制障碍物
+    for obstacle in obstacles:
+        screen.blit(obstacle.image, obstacle.rect)
+
+    # 显示分数
+    score_text = font.render(f"Score: {int(score)}", True, black)
+    screen.blit(score_text, (10, 10))
+
+    # 更新屏幕显示
+    pygame.display.flip()
+
+    # 控制游戏帧率
+    clock.tick(60)
+
+    # 更新分数
+    if not game_over:
+        score += 0.1
+
+    # 游戏结束处理
+    if game_over:
+        screen.fill(black)
+        over_font = pygame.font.Font(None, 70)
+        over_text = over_font.render("Game Over", True, white)
+        over_rect = over_text.get_rect(center=(screen_width // 2, screen_height // 2))
+        screen.blit(over_text, over_rect)
+        pygame.display.flip()
+        pygame.time.wait(3000)
+        running = False
+
+# 退出pygame
+pygame.quit()
+sys.exit()
